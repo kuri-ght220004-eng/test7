@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
 <title>학교 공유 캘린더</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -38,7 +38,7 @@ button{font-family:inherit;cursor:pointer}
 .day-cell.sun-col .day-num{color:#e24b4a}
 .day-cell.sat-col .day-num{color:#378add}
 .event-chip{display:block;box-sizing:border-box;width:100%;font-size:11px;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
-.more-ev{font-size:10px;color:#aaa;margin-top:2px}
+.more-ev{font-size:10px;color:#378add;font-weight:600;margin-top:2px;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;display:block;width:100%;text-align:left;text-decoration:underline}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem}
 .modal{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.12)}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:1.25rem;color:#1a1a1a}
@@ -60,15 +60,24 @@ button{font-family:inherit;cursor:pointer}
 .detail-note{font-size:13px;color:#666;background:#f8f7f4;border-radius:8px;padding:10px;margin-bottom:12px;line-height:1.6}
 .loading{text-align:center;padding:3rem;color:#aaa;font-size:14px}
 @media(max-width:700px){
-  .wrap{padding:1rem 0.3rem}
-  .cal-month{font-size:16px}
-  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
-  .grid{gap:2px;min-width:700px;width:700px}
-  .day-label{font-size:11px;padding:5px 0}
-  .day-cell{min-height:72px;padding:4px 3px;border-radius:5px}
-  .day-num{font-size:11px;margin-bottom:3px}
-  .event-chip{font-size:10.5px;padding:2px 4px;border-radius:3px}
-  .more-ev{font-size:9px}
+  .wrap{padding:0.5rem 2px}
+  .title{font-size:16px}
+  .subtitle{font-size:11px}
+  .cal-month{font-size:15px}
+  .header{margin-bottom:0.75rem}
+  .cal-nav{margin-bottom:0.6rem}
+  .mode-badge{font-size:11px;padding:3px 8px}
+  .auth-btn{font-size:11px;padding:5px 9px}
+  .nav-btn{width:28px;height:28px;font-size:15px}
+  /* 그리드: 화면 너비에 맞게, 고정 min-width 없음 */
+  .grid{gap:1px;width:100%}
+  .day-label{font-size:9px;padding:4px 0}
+  /* 셀 높이: JS가 주입, 기본값 충분히 */
+  .day-cell{min-height:60px;padding:3px 2px;border-radius:4px}
+  .day-num{font-size:10px;margin-bottom:2px;text-align:center}
+  /* 폰트: JS가 동적으로 조정 */
+  .event-chip{font-size:var(--chip-fs,8px);padding:1px 3px;border-radius:2px;margin-bottom:1px}
+  .more-ev{font-size:var(--chip-fs,8px)}
 }
 </style>
 </head>
@@ -199,7 +208,7 @@ function renderGrid() {
       const col = COLORS[ev.colorIdx % COLORS.length];
       chips += `<div class="event-chip" style="background:${col.bg};color:${col.text}" onclick="openDetail('${id}',event)">${ev.title}</div>`;
     });
-    if (dayEvs.length > 2) chips += `<div class="more-ev">+${dayEvs.length - 2}개 더</div>`;
+    if (dayEvs.length > 2) chips += `<button class="more-ev" onclick="openDayList('${dateStr}',event)">+${dayEvs.length - 2}개 더보기</button>`;
     html += `<div class="day-cell ${isToday?'today':''} ${dowCls} ${isTeacher?'clickable':''}" onclick="dayClick('${dateStr}',event)">
       <div class="day-num">${d}</div>${chips}</div>`;
   }
@@ -214,9 +223,49 @@ function isInRange(dateStr, start, end) { return dateStr >= start && dateStr <= 
 
 // ── 전역 이벤트 핸들러 (onclick에서 호출) ──────────
 window.dayClick = function(dateStr, e) {
-  if (!isTeacher) return;
   if (e.target.classList.contains('event-chip') || e.target.classList.contains('more-ev')) return;
-  showAddModal(dateStr);
+  if (isTeacher) {
+    showAddModal(dateStr);
+  } else {
+    // 조회 모드: 해당 날 일정 있으면 목록 팝업
+    const dayEvs = Object.entries(events).filter(([,ev]) => isInRange(dateStr, ev.date, ev.endDate || ev.date));
+    if (dayEvs.length > 0) openDayList(dateStr, e);
+  }
+};
+
+window.openDayList = function(dateStr, e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  const dayEvs = Object.entries(events).filter(([,ev]) => isInRange(dateStr, ev.date, ev.endDate || ev.date));
+  const [y, m, d] = dateStr.split('-');
+  const dateLabel = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+  let listHtml = '';
+  if (dayEvs.length === 0) {
+    listHtml = '<div style="text-align:center;color:#bbb;padding:1.5rem 0;font-size:14px">일정이 없습니다</div>';
+  } else {
+    listHtml = dayEvs.map(([id, ev]) => {
+      const col = COLORS[ev.colorIdx % COLORS.length];
+      const editBtns = isTeacher
+        ? `<div style="display:flex;gap:6px;margin-top:6px">
+             <button class="btn-danger" style="font-size:12px;padding:4px 10px" onclick="deleteEvent('${id}')">삭제</button>
+             <button class="btn-cancel" style="font-size:12px;padding:4px 10px" onclick="showEditModal('${id}')">수정</button>
+           </div>` : '';
+      return `<div style="padding:10px 0;border-bottom:1px solid #f0eeea">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col.bg};border:1px solid ${col.text}44;flex-shrink:0"></span>
+          <span style="font-size:15px;font-weight:600;color:#1a1a1a">${ev.title}</span>
+        </div>
+        <div style="font-size:12px;color:#aaa;padding-left:18px">${ev.category||'기타'}${ev.endDate && ev.endDate !== ev.date ? ' · ~'+ev.endDate : ''}</div>
+        ${ev.note ? `<div style="font-size:12px;color:#888;padding-left:18px;margin-top:3px;line-height:1.5">${ev.note.replace(/\n/g,'<br>')}</div>` : ''}
+        ${editBtns}
+      </div>`;
+    }).join('');
+  }
+  setModal(`<h3>📅 ${dateLabel}</h3>
+    <div style="max-height:60vh;overflow-y:auto">${listHtml}</div>
+    <div class="btn-row" style="margin-top:12px">
+      ${isTeacher ? `<button class="btn-cancel" onclick="closeModal();showAddModal('${dateStr}')">+ 추가</button>` : ''}
+      <button class="btn-primary" onclick="closeModal()">닫기</button>
+    </div>`);
 };
 
 window.openDetail = function(id, e) {
@@ -374,6 +423,18 @@ function setModal(inner) {
     `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`;
 }
 window.closeModal = function() { document.getElementById('modal-area').innerHTML = ''; };
+
+
+// ── 모바일 폰트 동적 계산 ──────────────────────────
+function applyMobileFont() {
+  if (window.innerWidth > 700) return;
+  const cellW = Math.floor(window.innerWidth / 7) - 2; // gap 고려
+  // 한글 1글자 ≈ fontSize px (전각), 10글자 + 좌우패딩 6px
+  const chipFs = Math.max(7, Math.floor((cellW - 6) / 10));
+  document.documentElement.style.setProperty('--chip-fs', chipFs + 'px');
+}
+window.addEventListener('resize', applyMobileFont);
+applyMobileFont();
 
 // ── 초기화 ──────────────────────────────────────────
 currentYear  = today.getFullYear();
