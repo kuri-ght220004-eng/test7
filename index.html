@@ -2,13 +2,12 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>학교 공유 캘린더</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%}
 body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#f8f7f4;color:#1a1a1a;min-height:100vh}
-.wrap{width:100%;max-width:1100px;margin:0 auto;padding:2rem 1.5rem;overflow-x:hidden}
+.wrap{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:12px}
 .title{font-size:22px;font-weight:700;color:#1a1a1a;letter-spacing:-0.3px}
 .subtitle{font-size:13px;color:#888;margin-top:3px}
@@ -26,23 +25,20 @@ button{font-family:inherit;cursor:pointer}
 .legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:#666}
 .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-/* 달력 스크롤 래퍼 */
-.cal-scroll-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;cursor:grab}
-/* 그리드: JS가 --cell-w 를 주입 */
-.grid{display:grid;grid-template-columns:repeat(7,var(--cell-w,1fr));gap:3px}
-.day-label{text-align:center;font-size:var(--lbl-fs,12px);color:#999;padding:6px 0;font-weight:600;width:var(--cell-w,1fr)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.day-label{text-align:center;font-size:12px;color:#999;padding:6px 0;font-weight:600;overflow:hidden}
 .day-label.sun{color:#e24b4a}
 .day-label.sat{color:#378add}
-.day-cell{height:var(--cell-h,90px);width:var(--cell-w,auto);min-width:0;overflow:hidden;border:1px solid #e8e6e0;border-radius:6px;padding:5px;background:#fff;transition:background 0.1s;position:relative}
+.day-cell{min-height:90px;min-width:0;width:100%;overflow:hidden;border:1px solid #e8e6e0;border-radius:8px;padding:7px;background:#fff;transition:background 0.1s;position:relative}
 .day-cell.other{background:#faf9f6;opacity:0.55}
 .day-cell.today{border:2px solid #378add}
 .day-cell.clickable{cursor:pointer}
 .day-cell.clickable:hover{background:#f5f5f5}
-.day-num{font-size:var(--num-fs,13px);font-weight:600;color:#1a1a1a;margin-bottom:3px}
+.day-num{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
 .day-cell.sun-col .day-num{color:#e24b4a}
 .day-cell.sat-col .day-num{color:#378add}
-.event-chip{display:block;box-sizing:border-box;width:100%;font-size:var(--chip-fs,11px);padding:2px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
-.more-ev{font-size:var(--more-fs,10px);color:#aaa;margin-top:2px}
+.event-chip{display:block;box-sizing:border-box;width:100%;font-size:11px;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:500}
+.more-ev{font-size:10px;color:#378add;margin-top:2px;cursor:pointer;font-weight:600;text-decoration:underline;background:none;border:none;padding:0;font-family:inherit;display:block;width:100%;text-align:left}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem}
 .modal{background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.12)}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:1.25rem;color:#1a1a1a}
@@ -64,12 +60,15 @@ button{font-family:inherit;cursor:pointer}
 .detail-note{font-size:13px;color:#666;background:#f8f7f4;border-radius:8px;padding:10px;margin-bottom:12px;line-height:1.6}
 .loading{text-align:center;padding:3rem;color:#aaa;font-size:14px}
 @media(max-width:700px){
-  .wrap{padding:0.75rem 4px}
-  .cal-scroll-wrap{width:100%!important}
-  .cal-month{font-size:15px}
-  .title{font-size:16px}
-  .header{margin-bottom:1rem}
-  .cal-nav{margin-bottom:0.75rem}
+  .wrap{padding:1rem 0.3rem}
+  .cal-month{font-size:16px}
+  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+  .grid{gap:2px;min-width:700px;width:700px}
+  .day-label{font-size:11px;padding:5px 0}
+  .day-cell{min-height:72px;padding:4px 3px;border-radius:5px}
+  .day-num{font-size:11px;margin-bottom:3px}
+  .event-chip{font-size:10.5px;padding:2px 4px;border-radius:3px}
+  .more-ev{font-size:9px;color:#378add}
 }
 </style>
 </head>
@@ -200,7 +199,7 @@ function renderGrid() {
       const col = COLORS[ev.colorIdx % COLORS.length];
       chips += `<div class="event-chip" style="background:${col.bg};color:${col.text}" onclick="openDetail('${id}',event)">${ev.title}</div>`;
     });
-    if (dayEvs.length > 2) chips += `<div class="more-ev">+${dayEvs.length - 2}개 더</div>`;
+    if (dayEvs.length > 2) chips += `<button class="more-ev" onclick="openDayList('${dateStr}',event)">+${dayEvs.length - 2}개 더 보기</button>`;
     html += `<div class="day-cell ${isToday?'today':''} ${dowCls} ${isTeacher?'clickable':''}" onclick="dayClick('${dateStr}',event)">
       <div class="day-num">${d}</div>${chips}</div>`;
   }
@@ -218,6 +217,43 @@ window.dayClick = function(dateStr, e) {
   if (!isTeacher) return;
   if (e.target.classList.contains('event-chip') || e.target.classList.contains('more-ev')) return;
   showAddModal(dateStr);
+};
+
+window.openDayList = function(dateStr, e) {
+  e.stopPropagation();
+  const dayEvs = Object.entries(events).filter(([,ev]) => isInRange(dateStr, ev.date, ev.endDate || ev.date));
+  if (!dayEvs.length) return;
+
+  // 날짜 표시 포맷
+  const [y, m, d] = dateStr.split('-');
+  const dateLabel = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+
+  let listHtml = dayEvs.map(([id, ev]) => {
+    const col = COLORS[ev.colorIdx % COLORS.length];
+    const editBtns = isTeacher
+      ? `<div style="display:flex;gap:6px;margin-top:6px">
+           <button class="btn-danger" style="font-size:12px;padding:4px 10px" onclick="deleteEvent('${id}')">삭제</button>
+           <button class="btn-cancel" style="font-size:12px;padding:4px 10px" onclick="showEditModal('${id}')">수정</button>
+         </div>` : '';
+    return `<div style="padding:10px 0;border-bottom:1px solid #f0eeea">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col.bg};border:1px solid ${col.text};flex-shrink:0"></span>
+        <span style="font-size:15px;font-weight:600;color:#1a1a1a">${ev.title}</span>
+      </div>
+      <div style="font-size:12px;color:#aaa;padding-left:18px">
+        ${ev.category||'기타'}${ev.endDate && ev.endDate !== ev.date ? ' · ~' + ev.endDate : ''}
+      </div>
+      ${ev.note ? `<div style="font-size:12px;color:#888;padding-left:18px;margin-top:3px;line-height:1.5">${ev.note.replace(/\n/g,'<br>')}</div>` : ''}
+      ${editBtns}
+    </div>`;
+  }).join('');
+
+  setModal(`<h3>📅 ${dateLabel}</h3>
+    <div style="margin-bottom:4px">${listHtml}</div>
+    <div class="btn-row" style="margin-top:12px">
+      ${isTeacher ? `<button class="btn-cancel" onclick="showAddModal('${dateStr}')">+ 일정 추가</button>` : ''}
+      <button class="btn-primary" onclick="closeModal()">닫기</button>
+    </div>`);
 };
 
 window.openDetail = function(id, e) {
@@ -375,48 +411,6 @@ function setModal(inner) {
     `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`;
 }
 window.closeModal = function() { document.getElementById('modal-area').innerHTML = ''; };
-
-// ── 셀 크기 동적 계산 ───────────────────────────────
-function applyGridSize() {
-  const GAP  = 3;
-  const COLS = 7;
-  const TARGET_CHARS = 10; // 셀에 보여줄 목표 글자 수
-
-  const wrapEl   = document.querySelector('.wrap');
-  const scrollEl = document.querySelector('.cal-scroll-wrap');
-  const avail    = wrapEl ? wrapEl.clientWidth : window.innerWidth;
-
-  // 셀 너비: 가용 너비를 7등분
-  const cellW = Math.floor((avail - GAP * (COLS - 1)) / COLS);
-
-  // 한글 폰트 크기 계산
-  // 한글 1글자 실측 너비 ≈ fontSize * 1.05 (시스템 폰트 기준)
-  // 칩 좌우 패딩 8px 제외한 공간에 TARGET_CHARS 글자가 들어와야 함
-  // chipFs = (cellW - 8) / (TARGET_CHARS * 1.05)
-  const chipFs = Math.max(7, Math.min(14, Math.floor((cellW - 8) / (TARGET_CHARS * 1.05))));
-  const numFs  = Math.max(8, Math.min(14, chipFs + 1));
-  const lblFs  = chipFs;
-  const cellH  = Math.max(60, Math.min(120, Math.round(cellW * 1.15)));
-
-  const root = document.documentElement;
-  root.style.setProperty('--cell-w',  cellW  + 'px');
-  root.style.setProperty('--cell-h',  cellH  + 'px');
-  root.style.setProperty('--chip-fs', chipFs + 'px');
-  root.style.setProperty('--num-fs',  numFs  + 'px');
-  root.style.setProperty('--lbl-fs',  lblFs  + 'px');
-  root.style.setProperty('--more-fs', Math.max(7, chipFs - 1) + 'px');
-
-  const gridW = cellW * COLS + GAP * (COLS - 1);
-  const gridEl = document.getElementById('cal-grid');
-  if (gridEl) {
-    gridEl.style.width    = gridW + 'px';
-    gridEl.style.minWidth = gridW + 'px';
-  }
-  if (scrollEl) scrollEl.style.width = avail + 'px';
-}
-
-window.addEventListener('resize', applyGridSize);
-applyGridSize();
 
 // ── 초기화 ──────────────────────────────────────────
 currentYear  = today.getFullYear();
