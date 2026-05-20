@@ -429,8 +429,8 @@ window.closeModal = function() { document.getElementById('modal-area').innerHTML
 function applyMobileFont() {
   if (window.innerWidth > 700) return;
   const cellW = Math.floor(window.innerWidth / 7) - 2; // gap 고려
-  // 한글 1글자 ≈ fontSize px (전각), 10글자 + 좌우패딩 6px
-  const chipFs = Math.max(7, Math.floor((cellW - 6) / 10));
+  // 한글 1글자 ≈ fontSize * 0.95px, 15글자 + 좌우패딩 6px
+  const chipFs = Math.max(7, Math.floor((cellW - 6) / 13 / 0.95));
   document.documentElement.style.setProperty('--chip-fs', chipFs + 'px');
 }
 window.addEventListener('resize', applyMobileFont);
