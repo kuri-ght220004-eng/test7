@@ -428,12 +428,25 @@ window.closeModal = function() { document.getElementById('modal-area').innerHTML
 // ── 모바일 폰트 동적 계산 ──────────────────────────
 function applyMobileFont() {
   if (window.innerWidth > 700) return;
-  const cellW = Math.floor(window.innerWidth / 7) - 2; // gap 고려
-  // 한글 1글자 ≈ fontSize * 0.95px, 15글자 + 좌우패딩 6px
-  const chipFs = Math.max(7, Math.floor((cellW - 6) / 13 / 0.95));
+
+  // 실제 렌더된 셀 DOM 너비를 읽어서 계산 (가장 정확)
+  const firstCell = document.querySelector('.day-cell');
+  const cellW = firstCell
+    ? firstCell.getBoundingClientRect().width
+    : (window.innerWidth - 14) / 7; // fallback: 패딩 14px 제외
+
+  // 한글 1글자 실제 너비 ≈ fontSize * 1.0 (전각)
+  // 셀 좌우 패딩 6px 제외한 공간에 13글자
+  const chipFs = Math.max(6, Math.floor((cellW - 6) / 13));
   document.documentElement.style.setProperty('--chip-fs', chipFs + 'px');
 }
 window.addEventListener('resize', applyMobileFont);
+// renderGrid 후 DOM이 생긴 뒤에 실행되도록 requestAnimationFrame 사용
+const _origRenderGrid = renderGrid;
+renderGrid = function() {
+  _origRenderGrid();
+  requestAnimationFrame(applyMobileFont);
+};
 applyMobileFont();
 
 // ── 초기화 ──────────────────────────────────────────
